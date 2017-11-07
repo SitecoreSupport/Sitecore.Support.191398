@@ -9,6 +9,7 @@ using Sitecore.Jobs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Web;
 
 namespace Sitecore.Support.ContentSearch.Events
@@ -57,9 +58,24 @@ namespace Sitecore.Support.ContentSearch.Events
                         //    }
                         //}
                         //CrawlingLog.Log.Info(string.Format("Items from installed items have been indexed.", new object[0]), null);
+                        //To avoid a deadlock, the above check is performed in a separate thread.
+                        Thread parallelThread = new Thread(new ParameterizedThreadStart(CheckingFinishUpdate));
+                        parallelThread.Start(list2);
                     }
                 }
             }
+        }
+        public void CheckingFinishUpdate(object list)
+        {
+            List<Job> list2 = (List<Job>)list;
+            foreach (Job job2 in list2)
+            {
+                while (!job2.IsDone)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+            CrawlingLog.Log.Info(string.Format("Items from installed items have been indexed.", new object[0]), null);
         }
     }
 }
